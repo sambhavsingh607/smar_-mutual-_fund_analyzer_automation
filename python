@@ -1,0 +1,56 @@
+
+---
+
+### 🔹 `src/analysis.py`
+```python
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import MinMaxScaler
+
+# -----------------------------
+# Load Dataset
+# -----------------------------
+df = pd.read_csv("../data/mutualfunds.csv")
+
+# -----------------------------
+# Data Cleaning
+# -----------------------------
+# Fill missing values
+df = df.fillna(0)
+
+# Ensure numeric columns are correct
+numeric_cols = ['Expense_Ratio', 'Return_1Y', 'Return_3Y', 'Return_5Y']
+for col in numeric_cols:
+    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+
+# -----------------------------
+# Feature Engineering
+# -----------------------------
+# Risk-Reward Scoring: higher returns, lower expense ratio
+df['Avg_Return'] = df[['Return_1Y', 'Return_3Y', 'Return_5Y']].mean(axis=1)
+df['Risk_Reward_Score'] = (df['Avg_Return'] / (df['Expense_Ratio'] + 1))
+
+# Normalize scores
+scaler = MinMaxScaler()
+df['Score_Normalized'] = scaler.fit_transform(df[['Risk_Reward_Score']])
+
+# -----------------------------
+# Select Top 30 Funds
+# -----------------------------
+top_funds = df.sort_values(by='Score_Normalized', ascending=False).head(30)
+
+# Save results
+top_funds.to_csv("../data/top30_funds.csv", index=False)
+
+# -----------------------------
+# Visualization
+# -----------------------------
+plt.figure(figsize=(12, 6))
+sns.barplot(x='Fund_Name', y='Score_Normalized', data=top_funds)
+plt.xticks(rotation=90)
+plt.title("Top 30 Mutual Funds by Risk-Reward Score")
+plt.tight_layout()
+plt.savefig("../data/top30_funds_chart.png")
+plt.show()
